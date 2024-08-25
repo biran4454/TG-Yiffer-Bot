@@ -45,10 +45,12 @@ async def forward_photo(update: Update, context):
     if user_amounts[update.message.from_user.id] == MAX_IMAGES * 3:
         await update.message.reply_text(f'Dude, slow down, the limit is {MAX_IMAGES} images per day, which will reset at midnight UK time')
         return
-    if user_amounts[update.message.from_user.id] == MAX_IMAGES:
+    if user_amounts[update.message.from_user.id] == MAX_IMAGES + 1:
         await update.message.reply_text(f'You have reached the limit of {MAX_IMAGES} images per day, run /get_limit to see when the limit resets')
         return
     
+    user_total[update.message.from_user.id] = user_total.get(update.message.from_user.id, 0) + 1
+
     photo = update.message.photo[-1].file_id
 
     caption = f'From: {update.message.from_user.username} ({update.message.from_user.id})'
@@ -64,7 +66,6 @@ async def verif_button(update: Update, context):
     query = update.callback_query
     await query.answer()
     if query.data == 'approve':
-        user_total[int(query.message.caption.split('\n')[0].split(' ')[1])] = user_total.get(int(query.message.caption.split('\n')[0].split(' ')[1]), 0) + 1
         await context.bot.send_photo(chat_id=CHANNEL_ID_MAIN, photo=query.message.photo[-1].file_id)
     else:
         await query.message.delete()
@@ -79,7 +80,7 @@ async def get_limit(update: Update, context):
         await update.message.reply_text('You have ' + str(MAX_IMAGES - user_amounts[update.message.from_user.id]) + ' images left today')
 
 async def start(update: Update, context):
-    await update.message.reply_text('Hi there, please send me a photo you would like to be featured')
+    await update.message.reply_text('Hi there, please send me a photo you would like to be featured!\n\nThere is a limit of 3 images per day.')
 
 def pick_random_file(path):
     with open('sent_images.txt', 'r') as f:
@@ -104,7 +105,7 @@ async def new_channel_photo(update: Update, context):
 
 async def advertise_bot(update: Update, context):
     if update.message.from_user.id != MY_ID:
-        await update.message.reply_text('You are not authorized to send photos')
+        await update.message.reply_text('You are not authorized to run this command')
         return
     
     keyboard = [
@@ -112,19 +113,32 @@ async def advertise_bot(update: Update, context):
     ]
     await context.bot.send_message(chat_id=CHANNEL_ID_MAIN, text=f'Message @{BOT_NAME} to suggest images for this channel!', reply_markup=InlineKeyboardMarkup(keyboard))
 
+def reset():
+    user_amounts.clear()
+    with open('banned_users.txt', 'r') as f:
+        banned_users = f.read().splitlines()
+        banned_users = [int(user) for user in banned_users]
+    with open('user_total.json', 'w') as f:
+        json.dump(user_total, f)
+
 async def midnight_check_loop():
     while True:
         await asyncio.sleep(60)
         if time.localtime().tm_hour == 0 and time.localtime().tm_min == 0:
-            print('Clearing user_amounts')
-            user_amounts.clear()
-            print('Loading banned_users')
-            with open('banned_users.txt', 'r') as f:
-                banned_users = f.read().splitlines()
-                banned_users = [int(user) for user in banned_users]
-            print('Saving user_total')
-            with open('user_total.json', 'w') as f:
-                json.dump(user_total, f)
+            print('Resetting')
+            reset()
+
+async def reset_command(update: Update, context):
+    if update.message.from_user.id != MY_ID:
+        await update.message.reply_text('You are not authorized to run this command')
+    reset()
+    await update.message.reply_text('Reset')
+
+async def get_user_amounts(update: Update, context):
+    if update.message.from_user.id != MY_ID:
+        await update.message.reply_text('You are not authorized to run this command')
+    await update.message.reply_text(str(user_amounts))
+    await update.message.reply_text(str(user_total))
 
 class MyIDFilter(filters.MessageFilter):
     def filter(self, message):
@@ -138,6 +152,8 @@ def main():
     app.add_handler(CommandHandler('new_photo', new_channel_photo, filters=MyIDFilter()))
     app.add_handler(CommandHandler('advertise', advertise_bot, filters=MyIDFilter()))
     app.add_handler(CommandHandler('get_limit', get_limit))
+    app.add_handler(CommandHandler('reset', reset_command, filters=MyIDFilter()))
+    app.add_handler(CommandHandler('get_user_amounts', get_user_amounts, filters=MyIDFilter()))
 
     loop = asyncio.get_event_loop()
     loop.create_task(midnight_check_loop())
