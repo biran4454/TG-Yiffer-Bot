@@ -33,6 +33,13 @@ user_total = {}
 with open('user_total.json', 'r') as f:
     user_total = json.load(f)
 
+for user in user_total:
+    user_total[int(user)] = user_total.pop(user)
+
+last_advertised_message_id = 0
+with open('last_advertised_message_id.txt', 'r') as f:
+    last_advertised_message_id = int(f.read())
+
 # forward photos to MY_ID
 async def forward_photo(update: Update, context):
     if time.localtime().tm_hour == 0 and time.localtime().tm_min == 0: # loading banned_users is done at midnight and is not thread safe
@@ -56,7 +63,7 @@ async def forward_photo(update: Update, context):
     caption = f'From: {update.message.from_user.username} ({update.message.from_user.id})'
 
     keyboard = [
-        [InlineKeyboardButton('Approve', callback_data='approve'), InlineKeyboardButton('Reject', callback_data='reject')]
+        [InlineKeyboardButton('Approve', callback_data='approve'), InlineKeyboardButton('Delete', callback_data='delete'), InlineKeyboardButton('Ban', callback_data=f'ban_{update.message.from_user.id}')]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
 
@@ -69,6 +76,11 @@ async def verif_button(update: Update, context):
         await context.bot.send_photo(chat_id=CHANNEL_ID_MAIN, photo=query.message.photo[-1].file_id)
     else:
         await query.message.delete()
+    if query.data.startswith('ban'):
+        user_id = int(query.data.split('_')[1])
+        with open('banned_users.txt', 'a') as f:
+            f.write(f'{user_id}\n')
+        banned_users.append(user_id)
 
 async def get_limit(update: Update, context):
     if update.message.from_user.id not in user_amounts:
@@ -108,10 +120,17 @@ async def advertise_bot(update: Update, context):
         await update.message.reply_text('You are not authorized to run this command')
         return
     
+    global last_advertised_message_id
+    if last_advertised_message_id:
+        await context.bot.delete_message(chat_id=CHANNEL_ID_MAIN, message_id=last_advertised_message_id)
+    
     keyboard = [
         [InlineKeyboardButton('Message me', url=f'https://t.me/{BOT_NAME}')]
     ]
-    await context.bot.send_message(chat_id=CHANNEL_ID_MAIN, text=f'Message @{BOT_NAME} to suggest images for this channel!', reply_markup=InlineKeyboardMarkup(keyboard))
+    message = await context.bot.send_message(chat_id=CHANNEL_ID_MAIN, text=f'Message @{BOT_NAME} to suggest images for this channel!', reply_markup=InlineKeyboardMarkup(keyboard))
+    last_advertised_message_id = message.message_id
+    with open('last_advertised_message_id.txt', 'w') as f:
+        f.write(str(last_advertised_message_id))
 
 def reset():
     user_amounts.clear()
