@@ -45,7 +45,7 @@ async def forward_photo(update: Update, context):
     if time.localtime().tm_hour == 0 and time.localtime().tm_min == 0: # loading banned_users is done at midnight and is not thread safe
         await update.message.reply_text('It is midnight, please wait a minute to avoid glitches :3')
         return
-    if str(update.message.from_user.id) in banned_users:
+    if update.message.from_user.id in banned_users:
         await update.message.reply_text('This account is not allowed to suggest images')
         return
     user_amounts[update.message.from_user.id] = user_amounts.get(update.message.from_user.id, 0) + 1
@@ -108,6 +108,11 @@ async def new_channel_photo(update: Update, context):
     if update.message.from_user.id != MY_ID:
         await update.message.reply_text('You are not authorized to send photos')
         return
+    await send_random_image()
+
+async def send_random_image(context=None):
+    if context is None:
+        context = Context()
     file = pick_random_file(PATH)
     if file:
         with open(f'{PATH}/{file}', 'rb') as f:
@@ -146,6 +151,8 @@ async def midnight_check_loop():
         if time.localtime().tm_hour == 0 and time.localtime().tm_min == 0:
             print('Resetting')
             reset()
+        elif time.localtime().tm_min == 0:
+            send_random_image()
 
 async def reset_command(update: Update, context):
     if update.message.from_user.id != MY_ID:
