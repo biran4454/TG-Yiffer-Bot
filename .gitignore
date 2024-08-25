@@ -1,0 +1,11 @@
+banned_users.txt
+done.txt
+user_total.json
+sent_images.txt
+downloader/
+downloads/
+images/
+sauce/
+.venv/
+.git/
+.env
