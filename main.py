@@ -23,6 +23,9 @@ logger = logging.getLogger(__name__)
 
 banned_users = []
 
+if not os.path.exists('banned_users.txt'):
+    with open('banned_users.txt', 'w') as f:
+        f.write('')
 with open('banned_users.txt', 'r') as f:
     banned_users = f.read().splitlines()
 banned_users = [int(user) for user in banned_users]
@@ -30,6 +33,9 @@ banned_users = [int(user) for user in banned_users]
 user_amounts = {}
 
 user_total = {}
+if not os.path.exists('user_total.json'):
+    with open('user_total.json', 'w') as f:
+        f.write('{}')
 with open('user_total.json', 'r') as f:
     user_total = json.load(f)
 
