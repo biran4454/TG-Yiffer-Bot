@@ -116,10 +116,15 @@ async def midnight_check_loop():
     while True:
         await asyncio.sleep(60)
         if time.localtime().tm_hour == 0 and time.localtime().tm_min == 0:
+            print('Clearing user_amounts')
             user_amounts.clear()
-        with open('banned_users.txt', 'r') as f:
-            banned_users = f.read().splitlines()
-            banned_users = [int(user) for user in banned_users]
+            print('Loading banned_users')
+            with open('banned_users.txt', 'r') as f:
+                banned_users = f.read().splitlines()
+                banned_users = [int(user) for user in banned_users]
+            print('Saving user_total')
+            with open('user_total.json', 'w') as f:
+                json.dump(user_total, f)
 
 class MyIDFilter(filters.MessageFilter):
     def filter(self, message):
@@ -137,10 +142,6 @@ def main():
     loop = asyncio.get_event_loop()
     loop.create_task(midnight_check_loop())
     app.run_polling()
-
-    print('Saving user_total')
-    with open('user_total.json', 'w') as f:
-        json.dump(user_total, f)
 
 if __name__ == '__main__':
     main()
