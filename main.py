@@ -157,7 +157,7 @@ async def midnight_check_loop():
         if time.localtime().tm_hour == 0 and time.localtime().tm_min == 0:
             print('Resetting')
             reset()
-        elif time.localtime().tm_min == 0:
+        elif time.localtime().tm_min == 0 and time.localtime().tm_hour % 6 == 1:
             send_random_image()
 
 async def reset_command(update: Update, context):
