@@ -158,7 +158,11 @@ async def midnight_check_loop():
             print('Resetting')
             reset()
         elif time.localtime().tm_min == 0 and time.localtime().tm_hour % 6 == 1:
-            send_random_image()
+            await send_random_image()
+
+async def boop(update: Update, context):
+    boop_messages = ["Boop!", "*boops back*", "boooop :3", ":0", "boopboopboop", ":3333", "^w^"]
+    await update.message.reply_text(random.choice(boop_messages))
 
 async def reset_command(update: Update, context):
     if update.message.from_user.id != MY_ID:
@@ -186,6 +190,7 @@ def main():
     app.add_handler(CommandHandler('get_limit', get_limit))
     app.add_handler(CommandHandler('reset', reset_command, filters=MyIDFilter()))
     app.add_handler(CommandHandler('get_user_amounts', get_user_amounts, filters=MyIDFilter()))
+    app.add_handler(CommandHandler('boop', boop))
 
     loop = asyncio.get_event_loop()
     loop.create_task(midnight_check_loop())
